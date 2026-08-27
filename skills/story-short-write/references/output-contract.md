@@ -151,7 +151,7 @@ Stage 6 内容写完后、`stages_completed[6]` append 前，跑三道检查：
 ```bash
 ls 小说工作室/拆书/{书名}/   # 应有：原文/ 拆文报告.md 情节节点.md 写作手法.md _meta.json
 /story-short-write 小说工作室/拆书/{书名}/
-# 通过：输出 8000+ 字同题材新短篇，prose 有源文对话节奏和画面感
+# 通过：输出含原导语、总字数 9000—12000、对话占比不超过 35% 的同题材新短篇，且 prose 延续源文节奏和画面感
 # 失败：写得像填空 / 或 short-write 找不到三个 markdown
 ```
 
