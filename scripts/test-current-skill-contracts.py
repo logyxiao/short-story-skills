@@ -1,0 +1,346 @@
+#!/usr/bin/env python3
+"""Focused regressions for the structured current-contract validator."""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import sys
+import tempfile
+from pathlib import Path
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent
+MODULE_PATH = SCRIPT_DIR / "check-current-skill-contracts.py"
+SPEC = importlib.util.spec_from_file_location("current_contract_validator", MODULE_PATH)
+assert SPEC is not None and SPEC.loader is not None
+VALIDATOR = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = VALIDATOR
+SPEC.loader.exec_module(VALIDATOR)
+
+
+def require(condition: bool, message: str) -> None:
+    if not condition:
+        raise AssertionError(message)
+
+
+def finding_codes(findings: list[object]) -> set[str]:
+    return {finding.code for finding in findings}
+
+
+def repository_manifest() -> object:
+    manifest, findings = VALIDATOR.load_manifest(SCRIPT_DIR / "current-contract.json")
+    require(not findings and manifest is not None, "repository manifest must load")
+    return manifest
+
+
+def manifest_with(**overrides: object) -> object:
+    """按正常加载路径构造一个改过值的当前契约，用来演练 bump。"""
+    raw = json.loads((SCRIPT_DIR / "current-contract.json").read_text(encoding="utf-8"))
+    raw.update(overrides)
+    with tempfile.TemporaryDirectory() as tmp:
+        bumped_path = Path(tmp) / "bumped.json"
+        bumped_path.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+        manifest, findings = VALIDATOR.load_manifest(bumped_path)
+    require(not findings and manifest is not None, "bumped manifest must stay well-formed")
+    return manifest
+
+
+def flagged_paths(manifest: object, code: str) -> set[str]:
+    return {
+        finding.path.relative_to(REPO_ROOT).as_posix()
+        for finding in VALIDATOR.validate_repository(REPO_ROOT, manifest)
+        if finding.code == code and finding.path is not None
+    }
+
+
+def test_manifest_contract() -> None:
+    manifest_path = SCRIPT_DIR / "current-contract.json"
+    manifest, findings = VALIDATOR.load_manifest(manifest_path)
+    require(not findings, "repository manifest should validate: {}".format(findings))
+    require(manifest is not None, "repository manifest should load")
+    require(not VALIDATOR.validate_repository(REPO_ROOT, manifest), "manifest and repository must agree")
+
+    raw = json.loads(manifest_path.read_text(encoding="utf-8"))
+    with tempfile.TemporaryDirectory() as tmp:
+        tmpdir = Path(tmp)
+
+        wrong_type = dict(raw)
+        wrong_type["agents_version"] = "18"
+        wrong_type_path = tmpdir / "wrong-type.json"
+        wrong_type_path.write_text(json.dumps(wrong_type, ensure_ascii=False), encoding="utf-8")
+        _, wrong_type_findings = VALIDATOR.load_manifest(wrong_type_path)
+        require(
+            "manifest-value-type" in finding_codes(wrong_type_findings),
+            "string agents_version must be rejected",
+        )
+
+def test_undecodable_markdown_is_a_named_failure() -> None:
+    """非 UTF-8 文本会让所有内容规则静默放行，必须命名报错；二进制资产照旧跳过。"""
+    rule = next(
+        r for r in VALIDATOR.LEGACY_RULES if r.code == "dotted-demo-workflow-label"
+    )
+    dotted = "# 流程说明\n\n旧编号：Step 1.2：旧编号标签\n"
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        demo = root / "demo"
+        demo.mkdir()
+        target = demo / "流程说明.md"
+        target.write_text(dotted, encoding="utf-8")
+        require(
+            VALIDATOR.check_absent_rule(root, rule),
+            "UTF-8 的旧编号标签必须被内容规则拦住",
+        )
+        target.write_bytes(dotted.encode("gb18030"))
+        require(
+            not VALIDATOR.check_absent_rule(root, rule),
+            "内容规则读不出 GBK 文件，这正是需要专门扫描的原因",
+        )
+        require(
+            "unreadable-source-file"
+            in finding_codes(VALIDATOR.undecodable_source_findings([demo])),
+            "非 UTF-8 的契约文本必须是命名失败，不能静默跳过",
+        )
+        target.write_text(dotted, encoding="utf-16")
+        require(
+            "unreadable-source-file"
+            in finding_codes(VALIDATOR.undecodable_source_findings([demo])),
+            "UTF-16 Markdown 含 NUL，但仍是契约文本，不能伪装成二进制资产跳过",
+        )
+        target.write_text(dotted, encoding="utf-8")
+        (demo / "封面.png").write_bytes(b"\x89PNG\r\n\x1a\n\xff\xfe")
+        # 无后缀 / 非白名单后缀的二进制（.DS_Store 之类）靠 NUL 字节识别，不能误报
+        (demo / ".DS_Store").write_bytes(b"\x00\x00\x00\x01Bud1\xff\xfe")
+        require(
+            not VALIDATOR.undecodable_source_findings([demo]),
+            "二进制资产不是契约文本，必须保持静默：{}".format(
+                VALIDATOR.undecodable_source_findings([demo])
+            ),
+        )
+
+
+def test_structured_sentinel_contract() -> None:
+    manifest = repository_manifest()
+    scattered = """
+agents_version: {agents_version}
+setup_skill_version: {setup_skill_version}
+说明文字中还提到了 target_cli、resolver_strategy 与 references_dir。
+""".format(
+        agents_version=manifest.agents_version,
+        setup_skill_version=manifest.setup_skill_version,
+    )
+    require(
+        VALIDATOR.extract_sentinel_fields(scattered) is None,
+        "scattered sentinel tokens must not satisfy the deployment block",
+    )
+    require(
+        "setup-sentinel-block"
+        in finding_codes(
+            VALIDATOR.sentinel_contract_findings(
+                scattered, manifest, Path("fixture.md")
+            )
+        ),
+        "missing structured sentinel block must fail",
+    )
+
+    structured = """
+### Step 8：创建部署标记
+
+- 写入以下字段：
+
+```yaml
+deployed_at: 2026-07-14T00:00:00Z
+agents_version: {agents_version}
+setup_skill_version: {setup_skill_version}
+target_cli: codex
+resolver_strategy: project-first
+references_dir: .codex/skills/story-setup/references
+```
+""".format(
+        agents_version=manifest.agents_version,
+        setup_skill_version=manifest.setup_skill_version,
+    )
+    require(
+        not VALIDATOR.sentinel_contract_findings(
+            structured, manifest, Path("fixture.md")
+        ),
+        "well-formed structured sentinel must pass",
+    )
+
+    incomplete = structured.replace("target_cli: codex\n", "")
+    require(
+        "setup-sentinel-fields"
+        in finding_codes(
+            VALIDATOR.sentinel_contract_findings(
+                incomplete, manifest, Path("fixture.md")
+            )
+        ),
+        "missing generated sentinel fields must fail",
+    )
+
+
+def test_upgrading_version_contract() -> None:
+    manifest = repository_manifest()
+    structured = """
+## 当前版本
+
+- `setup_skill_version: {setup_skill_version}`
+- `agents_version: {agents_version}`
+
+## 下一节
+""".format(
+        setup_skill_version=manifest.setup_skill_version,
+        agents_version=manifest.agents_version,
+    )
+    require(
+        not VALIDATOR.upgrading_version_findings(
+            structured, manifest, Path("UPGRADING.md")
+        ),
+        "structured current-version bullets must pass",
+    )
+    scattered = (
+        "说明 setup_skill_version: {}，agents_version: {}，但没有当前版本字段。".format(
+            manifest.setup_skill_version, manifest.agents_version
+        )
+    )
+    require(
+        "upgrading-current-version"
+        in finding_codes(
+            VALIDATOR.upgrading_version_findings(
+                scattered, manifest, Path("UPGRADING.md")
+            )
+        ),
+        "version strings scattered in prose must not satisfy current-version bullets",
+    )
+
+
+def test_old_artifact_prose_silent_only() -> None:
+    """keep C：带显式标记的旧格式大纲容忍放行，无标记的静默降级仍拦（drop A/B 不受影响）。"""
+    rule = next(r for r in VALIDATOR.LEGACY_RULES if r.code == "old-artifact-prose")
+    require(rule.exempt_when is not None, "old-artifact-prose must narrow to silent-only")
+    flagged = [
+        "旧版细纲缺这些字段不阻塞读取，未知项写 `[待补充]`。",
+        "旧版细纲回退读取核心事件、情节点序列、目标情绪。",
+        "旧版卷纲缺少卷契约/剧情单元卡不阻塞日更；本轮记录到 `追踪/上下文.md`。",
+        "旧版细纲只核对核心事件、目标情绪、章首/章尾钩子和字数目标。",
+    ]
+    silent = [
+        "直接改读旧版细纲当权威，不提示。",
+        "早期拆文库格式直接拿来用。",
+        "兼容旧结构，静默继续写作。",
+    ]
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        skills = root / "skills" / "story-short-write"
+        skills.mkdir(parents=True)
+        (skills / "keep-c.md").write_text("\n".join(flagged) + "\n", encoding="utf-8")
+        require(
+            not VALIDATOR.check_absent_rule(root, rule),
+            "flagged old-outline tolerance (keep C) must pass, got {}".format(
+                VALIDATOR.check_absent_rule(root, rule)
+            ),
+        )
+        (skills / "keep-c.md").write_text("\n".join(silent) + "\n", encoding="utf-8")
+        found = VALIDATOR.check_absent_rule(root, rule)
+        require(
+            len(found) == len(silent),
+            "each silent old-format downgrade must fire, got {}".format(found),
+        )
+
+
+def test_rubric_parity_guard() -> None:
+    """两份通用 rubric 必须同维度；两边都读不到时不能算通过。"""
+
+    rubric = (
+        "## 核心维度\n\n"
+        "| 维度 | PASS | WARN | FAIL |\n"
+        "|---|---|---|---|\n"
+        "| 核心卖点 | a | b | c |\n"
+        "| 标点节奏 | a | b | c |\n"
+        "\n## 发布建议门槛\n\n"
+        "| 综合情况 | Verdict |\n"
+        "|---|---|\n"
+        "| 无 S1/S2 | PASS |\n"
+    )
+    embedded = "通用网文内容 rubric：\n- 核心卖点：x\n- 标点节奏：y\n\nAI 味 fallback：\n"
+
+    def build(root: Path, rubric_body: str, skill_body: str) -> None:
+        r = root / "skills/story-review/references/quality-rubric.md"
+        s = root / "skills/story-review/SKILL.md"
+        r.parent.mkdir(parents=True, exist_ok=True)
+        r.write_text(rubric_body, encoding="utf-8")
+        s.write_text(skill_body, encoding="utf-8")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        build(root, rubric, embedded)
+        require(
+            not VALIDATOR.rubric_parity_findings(root),
+            "matching rubric dimensions must pass",
+        )
+        # 发布门槛表不是维度表，不能被算进来
+        table, _ = VALIDATOR.rubric_dimension_names(root)
+        require(
+            table == ["核心卖点", "标点节奏"],
+            "only the 核心维度 table counts, got {}".format(table),
+        )
+
+        build(root, rubric.replace("| 标点节奏 |", "| 标点节奏X |", 1), embedded)
+        require(
+            finding_codes(VALIDATOR.rubric_parity_findings(root)) == {"rubric-dimension-drift"},
+            "a dimension present only in the embedded fallback must fail",
+        )
+
+        build(root, rubric, embedded.replace("- 标点节奏：y\n", "", 1))
+        require(
+            finding_codes(VALIDATOR.rubric_parity_findings(root)) == {"rubric-dimension-drift"},
+            "a dimension present only in the file must fail",
+        )
+
+        # 整块删掉时两边都是空列表——空集相等，必须显式拦成读取失败而不是静默通过
+        build(root, rubric, "没有内置 rubric 了\n")
+        require(
+            finding_codes(VALIDATOR.rubric_parity_findings(root)) == {"rubric-parity-unreadable"},
+            "a missing embedded rubric must not pass vacuously",
+        )
+
+
+def test_issue_315_333_343_prompt_contracts() -> None:
+    """写作引号、Stage 6 切片真值、跨批 review 持久化必须有单一明确契约。"""
+
+    anti_ai = (REPO_ROOT / "skills/story-setup/references/agent-references/anti-ai-writing.md").read_text(
+        encoding="utf-8"
+    )
+    require(
+        "普通名词" in anti_ai and "引号强调" in anti_ai,
+        "#315: anti-ai reference must distinguish normal nouns from legitimate quotations",
+    )
+
+    review = (REPO_ROOT / "skills/story-review/SKILL.md").read_text(encoding="utf-8")
+    for anchor in (
+        ".story-review/state.md",
+        "上一批未解决 findings 摘要",
+        "先读取 state.md",
+        "原子重写 state.md",
+        "同时只维护一条跨批审查",
+        "征得用户确认",
+        "缺失、损坏或本批超出既定范围",
+    ):
+        require(anchor in review, f"#343: review persistence contract missing {anchor}")
+
+
+def main() -> int:
+    test_manifest_contract()
+    test_undecodable_markdown_is_a_named_failure()
+    test_old_artifact_prose_silent_only()
+    test_rubric_parity_guard()
+    test_issue_315_333_343_prompt_contracts()
+    test_structured_sentinel_contract()
+    test_upgrading_version_contract()
+    print("OK: current-contract manifest, structure, and fallback regressions passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

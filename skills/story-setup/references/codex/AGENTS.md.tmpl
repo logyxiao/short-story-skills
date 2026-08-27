@@ -1,0 +1,49 @@
+# {项目名} — 短篇网文写作工具集（Codex）
+
+## Skill 路由表
+
+Codex CLI 中优先通过 `$skill-name` 或 `/skills` 调用；自然语言也可触发对应 skill。
+
+| 命令/意图 | Skill | 说明 |
+|------|-------|------|
+| `$story-short-write`、写短篇 | story-short-write | 短篇网文写作（情绪驱动） |
+| `$story-short-analyze`、短篇拆文 | story-short-analyze | 短篇小说拆文分析 |
+| `$story-short-scan`、短篇扫榜 | story-short-scan | 短篇小说榜单与情绪风口 |
+| `$story-deslop`、去 AI 味 | story-deslop | 去除 AI 写作痕迹 |
+| `$story-review`、审查 | story-review | 多视角对抗式审查 |
+| `$story`、网文 | story | 工具箱路由 · 模糊意图自动分发 |
+| `$story-setup`、准备写书 | story-setup | 环境部署 · hooks + AGENTS + 知识库 |
+
+## 执行模型
+
+- **默认 agent（solo）**：本工具集默认不部署 custom agents；架构、角色、文笔、一致性等专业分工由当前默认 agent 按 skill 内角色指引依次完成（`story-review` 报告 `Effective Mode: solo`）。
+- **可选多 Agent**：需要多视角并行时可自行部署 `.codex/agents/*.toml` 并新开 Codex 会话；`story-review` 会按 full/lean 走多 Agent（`Effective Mode: full/lean`）。运行时返回 `unknown agent_type` / 未暴露 custom-agent registry 时一律降级默认 agent（`Fallback: ... -> solo`）。
+
+## 文件结构
+
+- `拆文库/` — 拆文分析结果存放目录（analyze 产出，写作参考源）
+- `{书名}/正文.md` — 短篇正文（单文件，不切章）
+- `{书名}/设定.md` — 核心框架、人设、反转铺垫、贯穿道具、反派设计、对标摘要
+- `{书名}/小节大纲.md` — 轻量蓝图（每节 1 行，含情绪曲线）
+- `{书名}/对标/` — 对标作品分析（拆文报告 / 情节节点 / 写作手法）
+- `.active-book` — 当前活跃书目的相对路径，hooks 与写作 skill 据此定位
+
+## Codex 项目约定
+
+- Codex hooks 部署在 `.codex/hooks.json` 和 `.codex/hooks/`；项目 `.codex/` 层需要被信任，非 managed hooks 还需要在 `/hooks` 中 review/trust 后才会运行。
+- 写正文前必须先有对应大纲：短篇 `小节大纲.md`。Codex hooks 会做机械守卫（缺纲阻断首次创建正文），但 skill 流程本身也必须遵守。
+- Compact 后优先读取 `{书名}/设定.md`、`{书名}/小节大纲.md` 与 `{书名}/正文.md` 恢复当前写作状态。
+
+## 协作规则
+
+默认 agent 单线程执行时，各专业分工按对应 skill 的 `references/` 指引在会话内依次完成，不依赖外部 agent 文件；已部署 custom agents 时，由 `.codex/agents/*.toml` 的职责边界描述定义分工。
+
+## Compact 后恢复上下文
+
+写作中的关键上下文：
+1. 当前写作项目名称和进度
+2. 最近讨论的角色设定变更
+3. 未回收的伏笔列表
+4. 当前小节的情绪/节奏目标
+
+compact 后先读取 `{书名}/设定.md`、`{书名}/小节大纲.md` 与 `{书名}/正文.md` 恢复上下文。
