@@ -16,7 +16,7 @@ metadata: {"openclaw":{"source":"https://github.com/worldwonderer/oh-story-claud
    - `agents_version` 缺失、非整数或小于 `26` → 标记为待更新，继续执行当前部署
    - `agents_version: 26` → 使用 AskUserQuestion 确认是否重新部署；重新部署只用**当前本地 skill 包**刷新项目文件，要拿 skill 本身的新版本得先更新 oh-story-claudecode，再回来重跑
    - `agents_version` 大于 `26` → 当前 story-setup 比项目部署旧；停止以避免降级覆盖，提示先更新 oh-story-claudecode
-2. 检查是否有书名目录（短篇信号：目录内含 `正文.md` 文件，或用户自定义结构）
+2. 检查 `小说工作室/正文/` 下是否有书名目录（短篇信号：目录内含 `正文.md` 文件）
    - 有 → 识别为短篇项目，显示当前项目信息
    - 无 → 识别为新项目
 3. 检查 `.codex/`、`.codex/config.toml`、`.codex/hooks.json`、`AGENTS.md` 中的 Codex 段
@@ -37,7 +37,11 @@ metadata: {"openclaw":{"source":"https://github.com/worldwonderer/oh-story-claud
 | `skills/story-setup/references/codex/hooks/{story_codex_hook.py,run-story-hook.sh,run-story-hook.cmd}` | `.codex/hooks/` 同名文件 | story-setup managed | replace | Python/shell/cmd launcher 文件齐全 |
 | `skills/story-setup/scripts/merge-codex-hooks.py` | 部署时执行，不复制到项目 | story-setup helper | execute | 替换已知管理注册、保留用户 hooks 与未知顶层字段，结果幂等 |
 | `skills/story-setup/references/agent-references/*.md` | `.codex/skills/story-setup/references/agent-references/*.md` | story-setup managed | replace | every `story-setup/references/agent-references/*.md` reference resolves |
+| generated workspace directories | `小说工作室/正文/`、`小说工作室/拆书/` | user state | create if absent | both directories exist |
+| generated workspace ignore rules | `.gitignore` | user+managed | append missing exact lines; preserve all existing rules | contains `/小说工作室/正文/` and `/小说工作室/拆书/` exactly once |
 | generated sentinel | `.story-deployed` | story-setup managed | replace | contains `agents_version`, `setup_skill_version`, `target_cli`, `resolver_strategy`, `references_dir` |
+
+部署时创建 `小说工作室/正文/` 与 `小说工作室/拆书/`。随后读取项目根目录 `.gitignore`（不存在则创建），只补入缺失的 `/小说工作室/正文/`、`/小说工作室/拆书/` 两行；保留用户已有内容，重复部署不得产生重复规则。两条规则必须带开头 `/`，只忽略项目根目录的小说工作室产物，不得扩大为任意层级同名目录。
 
 ### Step 2：部署 AGENTS.md
 
@@ -87,8 +91,9 @@ Codex 项目 hooks 部署到 `.codex/hooks.json`；运行脚本部署到 `.codex
 1. 验证 hooks 注册：检查 `.codex/hooks.json` 存在且 JSON 有效，Unix `command` 仅通过 `run-story-hook.sh` 启动，Windows `commandWindows` 仅通过 `run-story-hook.cmd` 启动；不存在直调 `story_codex_hook.py` 的注册。
 2. 验证 launcher：`.codex/hooks/story_codex_hook.py`、`run-story-hook.sh`、`run-story-hook.cmd` 存在，Python 语法有效，POSIX/Windows launcher 能从嵌套 cwd 定位项目根。
 3. 验证 agent reference bundle：`.codex/skills/story-setup/references/agent-references/` 下 reference 文件完整且数量与源目录一致。
-4. 验证部署标记：`.story-deployed` 存在且含时间戳、`agents_version: 26`、`setup_skill_version: 1.2.8`、`target_cli`、`resolver_strategy`、`references_dir`。
-5. 输出安装报告：
+4. 验证小说工作室：`小说工作室/正文/`、`小说工作室/拆书/` 均存在；`.gitignore` 中 `/小说工作室/正文/` 与 `/小说工作室/拆书/` 各存在且仅存在一次。
+5. 验证部署标记：`.story-deployed` 存在且含时间戳、`agents_version: 26`、`setup_skill_version: 1.2.8`、`target_cli`、`resolver_strategy`、`references_dir`。
+6. 输出安装报告：
    - 列出所有已部署的文件与注意事项（如已有配置已合并）
    - **Codex 注意项（必须醒目输出）**：项目 `.codex/` 配置层需要被 Codex trust，非 managed command hooks 还需在 `/hooks` review/trust；本工具集默认不部署 custom agents，各 skill 由默认 agent 直接执行（solo）。若你自行部署了 `.codex/agents/*.toml`，新开 Codex 会话让 custom agents 生效；当前运行时返回 `unknown agent_type` 时按各 skill 的 fallback 规则降级默认 agent。
    - 重启后即可使用 `/story-short-write`（Codex：`$story-short-write`）

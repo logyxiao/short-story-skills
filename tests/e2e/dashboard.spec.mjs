@@ -2,11 +2,11 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
-// demo 只剩拆文库/曾将爱意私藏（无写作项目）：凡需要写作项目的用例都在工作区根
-// 自建短篇工程（正文.md + 设定.md + 小节大纲.md），删库后仍有完整覆盖。
+// demo 只剩小说工作室/拆书/曾将爱意私藏（无写作项目）：凡需要写作项目的用例都放进正文总目录。
+// 自建短篇工程包含 正文.md + 设定.md + 小节大纲.md，删库后仍有完整覆盖。
 async function createShortProject(request, name = "短篇项目", extraFiles = {}) {
   const workspace = await request.get("/api/workspace").then((response) => response.json());
-  const projectRoot = resolve(workspace.workspace.path, name);
+  const projectRoot = resolve(workspace.workspace.path, "小说工作室", "正文", name);
   await mkdir(projectRoot, { recursive: true });
   await writeFile(resolve(projectRoot, "正文.md"), "正文", "utf8");
   await writeFile(resolve(projectRoot, "设定.md"), "设定", "utf8");
@@ -17,7 +17,7 @@ async function createShortProject(request, name = "短篇项目", extraFiles = {
   return projectRoot;
 }
 
-test("用现有 demo 浏览拆文库、在自建短篇项目里搜索并编辑保存", async ({ page, request }) => {
+test("用现有 demo 浏览拆书、在正文总目录的自建项目里搜索并编辑保存", async ({ page, request }) => {
   const consoleErrors = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
@@ -43,7 +43,7 @@ test("用现有 demo 浏览拆文库、在自建短篇项目里搜索并编辑�
   await expect(page.locator("#librariesTab")).toHaveAttribute("aria-selected", "true");
 
   await expect(page.locator("#fileTree")).toContainText("曾将爱意私藏");
-  await page.locator(".file-row[data-path='拆文库/曾将爱意私藏/拆文报告.md']").click();
+  await page.locator(".file-row[data-path='小说工作室/拆书/曾将爱意私藏/拆文报告.md']").click();
   await expect(page.locator("#editorTitle")).toHaveText("拆文报告.md");
   await expect(page.locator("#editorInput")).toHaveValue(/曾将爱意私藏/);
 
@@ -70,10 +70,14 @@ test("用现有 demo 浏览拆文库、在自建短篇项目里搜索并编辑�
   await expect(page.locator("#previewPane img")).toHaveCount(0);
   await expect(page.locator("#previewPane h1")).toHaveText("安全预览");
 
-  await page.getByRole("tab", { name: /写作项目/ }).click();
+  await page.getByRole("tab", { name: /正文/ }).click();
   await expect(page.locator("#treeTruncationNotice")).toHaveCount(0);
   await expect(page.locator("#fileTree")).not.toContainText("关系.md");
-  await page.locator("summary").filter({ hasText: "短篇项目" }).click();
+  const shortProject = page.locator("details[data-path='小说工作室/正文/短篇项目']");
+  const shortProjectSummary = shortProject.locator(":scope > summary");
+  // 首层目录默认展开；显式收起再展开，记录“作者亲手展开”的状态用于刷新后恢复。
+  await shortProjectSummary.click();
+  await shortProjectSummary.click();
   await expect(page.locator("#fileTree")).toContainText("江晨.md");
   const unfilteredRows = await page.locator("#fileTree .file-row").count();
   expect(unfilteredRows).toBeGreaterThan(1);
@@ -103,13 +107,15 @@ test("用现有 demo 浏览拆文库、在自建短篇项目里搜索并编辑�
   expect(consoleErrors).toEqual([]);
 });
 
-test("从真实 demo 删除拆文库文稿前明确确认并刷新文件树", async ({ page, request }, testInfo) => {
-  const retryFiles = [
-    "拆文库/曾将爱意私藏/写作手法.md",
-    "拆文库/曾将爱意私藏/情节节点.md",
-    "拆文库/曾将爱意私藏/拆文报告.md",
-  ];
-  const filePath = retryFiles[testInfo.retry];
+test("从真实 demo 删除拆书文稿前明确确认并刷新文件树", async ({ page, request }) => {
+  const workspace = await request.get("/api/workspace").then((response) => response.json());
+  const fileName = `待删除-${Date.now()}.md`;
+  const filePath = `小说工作室/拆书/曾将爱意私藏/${fileName}`;
+  await writeFile(
+    resolve(workspace.workspace.path, ...filePath.split("/")),
+    "这是一份专供删除回归测试使用的临时拆书文稿。",
+    "utf8",
+  );
   await page.goto("/");
   await expect(page.locator("#fileCount")).toContainText("+");
   const initialFileCount = Number(
@@ -117,7 +123,6 @@ test("从真实 demo 删除拆文库文稿前明确确认并刷新文件树", as
   );
   expect(Number.isFinite(initialFileCount)).toBeTruthy();
 
-  const fileName = filePath.split("/").at(-1);
   await page.locator(`.file-row[data-path='${filePath}']`).click();
   await expect(page.locator("#editorTitle")).toHaveText(fileName);
 
@@ -161,8 +166,8 @@ test("从真实 demo 删除拆文库文稿前明确确认并刷新文件树", as
 });
 
 test("保存途中切走文稿，结果不能落到新打开的那份上", async ({ page, request }) => {
-  const fileA = "拆文库/曾将爱意私藏/写作手法.md";
-  const fileB = "拆文库/曾将爱意私藏/拆文报告.md";
+  const fileA = "小说工作室/拆书/曾将爱意私藏/写作手法.md";
+  const fileB = "小说工作室/拆书/曾将爱意私藏/拆文报告.md";
   await page.goto("/");
   await expect(page.locator("#fileCount")).not.toHaveText("—");
 
@@ -213,7 +218,7 @@ test("保存途中切走文稿，结果不能落到新打开的那份上", async
 });
 
 test("保存途中继续敲的字仍算未保存", async ({ page, request }) => {
-  const filePath = "拆文库/曾将爱意私藏/写作手法.md";
+  const filePath = "小说工作室/拆书/曾将爱意私藏/写作手法.md";
   await page.goto("/");
   await expect(page.locator("#fileCount")).not.toHaveText("—");
   await page.route("**/api/file", async (route) => {
@@ -249,7 +254,7 @@ test("保存途中继续敲的字仍算未保存", async ({ page, request }) => 
 });
 
 test("CRLF 稿件不会被一次改动重写换行，脏标记也能清干净", async ({ page, request }) => {
-  const filePath = "短篇项目/文风.md";
+  const filePath = "小说工作室/正文/短篇项目/文风.md";
   await createShortProject(request, "短篇项目", {
     "文风.md": "# 文风\n第一行。\n第二行。\n第三行。\n",
   });
@@ -264,7 +269,7 @@ test("CRLF 稿件不会被一次改动重写换行，脏标记也能清干净", 
   expect(crlfContent).toContain("\r\n");
 
   await page.goto("/");
-  await page.getByRole("tab", { name: /写作项目/ }).click();
+  await page.getByRole("tab", { name: /正文/ }).click();
   await page.locator("#treeSearch").fill("文风");
   await page.locator(`.file-row[data-path='${filePath}']`).click();
   await expect(page.locator("#editorTitle")).toHaveText("文风.md");
@@ -290,7 +295,7 @@ test("CRLF 稿件不会被一次改动重写换行，脏标记也能清干净", 
 });
 
 test("LF 稿件里的孤立 CR 不会把整篇保存成 CR-only", async ({ page, request }) => {
-  const filePath = "短篇项目/文风.md";
+  const filePath = "小说工作室/正文/短篇项目/文风.md";
   await createShortProject(request, "短篇项目", {
     "文风.md": "# 文风\n第一行。\n第二行。\n第三行。\n",
   });
@@ -304,7 +309,7 @@ test("LF 稿件里的孤立 CR 不会把整篇保存成 CR-only", async ({ page,
   expect(converted.ok()).toBeTruthy();
 
   await page.goto("/");
-  await page.getByRole("tab", { name: /写作项目/ }).click();
+  await page.getByRole("tab", { name: /正文/ }).click();
   await page.locator("#treeSearch").fill("文风");
   await page.locator(`.file-row[data-path='${filePath}']`).click();
   await expect(page.locator("#editorTitle")).toHaveText("文风.md");
@@ -323,7 +328,7 @@ test("LF 稿件里的孤立 CR 不会把整篇保存成 CR-only", async ({ page,
 });
 
 test("CRLF 稿件里的孤立 CR 不会反向触发整篇 LF 重写", async ({ page, request }) => {
-  const filePath = "短篇项目/文风.md";
+  const filePath = "小说工作室/正文/短篇项目/文风.md";
   await createShortProject(request, "短篇项目", {
     "文风.md": "# 文风\n第一行。\n第二行。\n第三行。\n",
   });
@@ -340,7 +345,7 @@ test("CRLF 稿件里的孤立 CR 不会反向触发整篇 LF 重写", async ({ p
   expect(converted.ok()).toBeTruthy();
 
   await page.goto("/");
-  await page.getByRole("tab", { name: /写作项目/ }).click();
+  await page.getByRole("tab", { name: /正文/ }).click();
   await page.locator("#treeSearch").fill("文风");
   await page.locator(`.file-row[data-path='${filePath}']`).click();
   const editor = page.locator("#editorInput");
@@ -360,13 +365,12 @@ test("CRLF 稿件里的孤立 CR 不会反向触发整篇 LF 重写", async ({ p
 });
 
 test("打开文稿不会收起正在翻的目录", async ({ page, request }) => {
-  const rowPath = "短篇项目/小节大纲.md";
+  const rowPath = "小说工作室/正文/短篇项目/小节大纲.md";
   await createShortProject(request, "短篇项目");
   await page.goto("/");
-  await page.getByRole("tab", { name: /写作项目/ }).click();
+  await page.getByRole("tab", { name: /正文/ }).click();
   await expect(page.locator("#fileTree")).toContainText("短篇项目");
 
-  await page.locator("summary").filter({ hasText: "短篇项目" }).click();
   const row = page.locator(`.file-row[data-path='${rowPath}']`);
   await expect(row).toBeVisible();
 
@@ -388,7 +392,7 @@ test("打开文稿不会收起正在翻的目录", async ({ page, request }) => 
 
 test("深目录不再被首屏扫描深度剪掉，搜索时仍能按需找到", async ({ page, request }) => {
   const workspace = await request.get("/api/workspace").then((response) => response.json());
-  const projectRoot = resolve(workspace.workspace.path, "深项目");
+  const projectRoot = resolve(workspace.workspace.path, "小说工作室", "正文", "深项目");
   const nestedRoot = resolve(projectRoot, "深卷");
   const nestedLeaf = resolve(
     nestedRoot,
@@ -402,7 +406,7 @@ test("深目录不再被首屏扫描深度剪掉，搜索时仍能按需找到",
     await writeFile(resolve(nestedLeaf, "埋掉的一章.md"), "深处的正文", "utf8");
 
     await page.goto("/");
-    await page.getByRole("tab", { name: /写作项目/ }).click();
+    await page.getByRole("tab", { name: /正文/ }).click();
     await page.locator("#treeSearch").fill("埋掉的一章");
     await expect(page.locator("#fileTree")).toContainText("埋掉的一章.md");
     await expect(page.locator("#treeTruncationNotice")).toHaveCount(0);
@@ -417,7 +421,7 @@ test("目录读取失败时提示权限或挂载问题，而不是伪装成空�
     const payload = await response.json();
     payload.libraries = [];
     payload.scanErrors = [
-      { path: "拆文库", code: "EACCES", message: "目录无法读取" },
+      { path: "小说工作室/拆书", code: "EACCES", message: "目录无法读取" },
     ];
     payload.limits = {
       ...payload.limits,
@@ -428,7 +432,7 @@ test("目录读取失败时提示权限或挂载问题，而不是伪装成空�
   });
 
   await page.goto("/");
-  await expect(page.locator("#treeTruncationNotice")).toContainText("拆文库无法读取");
+  await expect(page.locator("#treeTruncationNotice")).toContainText("小说工作室/拆书无法读取");
   await expect(page.locator("#treeTruncationNotice")).toContainText("检查这些目录的访问权限和外挂盘挂载状态");
   await expect(page.locator("#fileCount")).toHaveAttribute(
     "title",
@@ -444,7 +448,7 @@ test("顶层目录自动加载失败后停止重取，只在用户点击时重�
     payload.libraries = [
       {
         name: "坏档案",
-        path: "拆文库/坏档案",
+        path: "小说工作室/拆书/坏档案",
         type: "directory",
         children: [],
         loaded: false,
@@ -455,7 +459,7 @@ test("顶层目录自动加载失败后停止重取，只在用户点击时重�
   });
   await page.route("**/api/tree?*", async (route) => {
     const url = new URL(route.request().url());
-    if (url.searchParams.get("path") !== "拆文库/坏档案") {
+    if (url.searchParams.get("path") !== "小说工作室/拆书/坏档案") {
       await route.continue();
       return;
     }
@@ -466,7 +470,7 @@ test("顶层目录自动加载失败后停止重取，只在用户点击时重�
       body: JSON.stringify({
         error: {
           code: "directory_unreadable",
-          message: "目录无法读取，请检查访问权限或挂载状态：拆文库/坏档案",
+          message: "目录无法读取，请检查访问权限或挂载状态：小说工作室/拆书/坏档案",
         },
       }),
     });
@@ -513,7 +517,7 @@ test("搜索零命中时仍按具体原因显示截断警告", async ({ page }) 
   });
 
   await page.goto("/");
-  await page.getByRole("tab", { name: /写作项目/ }).click();
+  await page.getByRole("tab", { name: /正文/ }).click();
   await page.locator("#treeSearch").fill("不存在的文件");
   await expect(page.locator("#fileTree")).toContainText(
     "搜索未完成，暂时无法确认是否存在“不存在的文件”",
@@ -539,7 +543,7 @@ test("搜索零命中但目录读取失败时显示权限或挂载提示", async
           byDepth: false,
           byReadError: true,
         },
-        scanErrors: [{ path: "短篇项目/受限卷", code: "EACCES" }],
+        scanErrors: [{ path: "小说工作室/正文/短篇项目/受限卷", code: "EACCES" }],
         limits: {
           maxResults: 100,
           maxNodes: 5000,
@@ -550,19 +554,19 @@ test("搜索零命中但目录读取失败时显示权限或挂载提示", async
   });
 
   await page.goto("/");
-  await page.getByRole("tab", { name: /写作项目/ }).click();
+  await page.getByRole("tab", { name: /正文/ }).click();
   await page.locator("#treeSearch").fill("目标章");
   await expect(page.locator("#fileTree")).toContainText(
     "搜索未完成，暂时无法确认是否存在“目标章”",
   );
-  await expect(page.locator("#fileTree")).toContainText("短篇项目/受限卷无法读取");
+  await expect(page.locator("#fileTree")).toContainText("小说工作室/正文/短篇项目/受限卷无法读取");
   await expect(page.locator("#fileTree")).toContainText("访问权限或外挂盘挂载状态");
   await expect(page.locator("#fileTree")).not.toContainText("没有找到“目标章”");
 });
 
 test("宽目录按页加载，点击更多后继续追加而不丢失首批文件", async ({ page, request }) => {
   const workspace = await request.get("/api/workspace").then((response) => response.json());
-  const project = resolve(workspace.workspace.path, "宽项目");
+  const project = resolve(workspace.workspace.path, "小说工作室", "正文", "宽项目");
   const volume = resolve(project, "批量卷");
 
   try {
@@ -582,10 +586,10 @@ test("宽目录按页加载，点击更多后继续追加而不丢失首批文�
     }
 
     await page.goto("/");
-    await page.getByRole("tab", { name: /写作项目/ }).click();
+    await page.getByRole("tab", { name: /正文/ }).click();
     await page.locator("summary").filter({ hasText: "批量卷" }).click();
-    const first = page.locator(`.file-row[data-path='宽项目/批量卷/第00001章.md']`);
-    const last = page.locator(`.file-row[data-path='宽项目/批量卷/第00205章.md']`);
+    const first = page.locator(`.file-row[data-path='小说工作室/正文/宽项目/批量卷/第00001章.md']`);
+    const last = page.locator(`.file-row[data-path='小说工作室/正文/宽项目/批量卷/第00205章.md']`);
     await expect(first).toBeVisible();
     await expect(last).toHaveCount(0);
     await page.getByRole("button", { name: "加载更多" }).click();
@@ -603,11 +607,10 @@ test("@mobile 手机视口仍可从真实短篇项目打开大纲", async ({ pag
   await expect(page.getByText("OH STORY", { exact: true })).toBeVisible();
   await expect(page.locator(".archive-panel")).toBeVisible();
 
-  await page.getByRole("tab", { name: /写作项目/ }).click();
+  await page.getByRole("tab", { name: /正文/ }).click();
   await expect(page.locator("#fileTree")).toContainText("短篇项目");
-  await page.locator("summary").filter({ hasText: "短篇项目" }).click();
   await page
-    .locator(".file-row[data-path='短篇项目/小节大纲.md']")
+    .locator(".file-row[data-path='小说工作室/正文/短篇项目/小节大纲.md']")
     .click();
 
   await expect(page.locator("#editorTitle")).toHaveText("小节大纲.md");

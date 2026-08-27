@@ -34,29 +34,29 @@ afterEach(async () => {
 async function createWorkspace() {
   const root = await mkdtemp(resolve(tmpdir(), "oh-story-dashboard-test-"));
   temporaryDirectories.push(root);
-  await mkdir(resolve(root, "拆文库", "示例拆书", "章节"), { recursive: true });
-  await mkdir(resolve(root, "短篇", "示例书"), { recursive: true });
+  await mkdir(resolve(root, "小说工作室", "拆书", "示例拆书", "章节"), { recursive: true });
+  await mkdir(resolve(root, "小说工作室", "正文", "示例书"), { recursive: true });
   // 基建目录必须落在被扫描的库/项目内部：放在工作区根下永远进不了树，
   // 断言就成了空转，测不出忽略规则有没有失效。
-  await mkdir(resolve(root, "短篇", "示例书", ".git", "objects"), { recursive: true });
-  await mkdir(resolve(root, "短篇", "示例书", "node_modules", "fake-package"), {
+  await mkdir(resolve(root, "小说工作室", "正文", "示例书", ".git", "objects"), { recursive: true });
+  await mkdir(resolve(root, "小说工作室", "正文", "示例书", "node_modules", "fake-package"), {
     recursive: true,
   });
-  await mkdir(resolve(root, "拆文库", "示例拆书", ".omc", "state"), { recursive: true });
-  await writeFile(resolve(root, "拆文库", "示例拆书", "拆文报告.md"), "# 示例拆书\n", "utf8");
-  await writeFile(resolve(root, "拆文库", "示例拆书", "章节", "第1章.md"), "第一章", "utf8");
+  await mkdir(resolve(root, "小说工作室", "拆书", "示例拆书", ".omc", "state"), { recursive: true });
+  await writeFile(resolve(root, "小说工作室", "拆书", "示例拆书", "拆文报告.md"), "# 示例拆书\n", "utf8");
+  await writeFile(resolve(root, "小说工作室", "拆书", "示例拆书", "章节", "第1章.md"), "第一章", "utf8");
   // 短篇工程：正文.md + 设定.md + 小节大纲.md
-  await writeFile(resolve(root, "短篇", "示例书", "正文.md"), "初稿", "utf8");
-  await writeFile(resolve(root, "短篇", "示例书", "设定.md"), "# 设定\n", "utf8");
-  await writeFile(resolve(root, "短篇", "示例书", "小节大纲.md"), "# 小节大纲\n", "utf8");
-  await writeFile(resolve(root, "短篇", "示例书", ".git", "config"), "secret", "utf8");
+  await writeFile(resolve(root, "小说工作室", "正文", "示例书", "正文.md"), "初稿", "utf8");
+  await writeFile(resolve(root, "小说工作室", "正文", "示例书", "设定.md"), "# 设定\n", "utf8");
+  await writeFile(resolve(root, "小说工作室", "正文", "示例书", "小节大纲.md"), "# 小节大纲\n", "utf8");
+  await writeFile(resolve(root, "小说工作室", "正文", "示例书", ".git", "config"), "secret", "utf8");
   await writeFile(
-    resolve(root, "短篇", "示例书", "node_modules", "fake-package", "index.js"),
+    resolve(root, "小说工作室", "正文", "示例书", "node_modules", "fake-package", "index.js"),
     "x",
     "utf8",
   );
-  await writeFile(resolve(root, "拆文库", "示例拆书", ".omc", "state", "secrets.json"), "{}", "utf8");
-  await writeFile(resolve(root, "短篇", "示例书", "封面.png"), "not-an-image", "utf8");
+  await writeFile(resolve(root, "小说工作室", "拆书", "示例拆书", ".omc", "state", "secrets.json"), "{}", "utf8");
+  await writeFile(resolve(root, "小说工作室", "正文", "示例书", "封面.png"), "not-an-image", "utf8");
   return root;
 }
 
@@ -64,21 +64,21 @@ async function createProjectDiscoveryWorkspace() {
   const root = await mkdtemp(resolve(tmpdir(), "oh-story-dashboard-projects-"));
   temporaryDirectories.push(root);
 
-  await mkdir(resolve(root, "短篇", "标准短篇"), { recursive: true });
-  await writeFile(resolve(root, "短篇", "标准短篇", "正文.md"), "正文", "utf8");
-  await writeFile(resolve(root, "短篇", "标准短篇", "小节大纲.md"), "大纲", "utf8");
-  await writeFile(resolve(root, "短篇", "标准短篇", "设定.md"), "设定", "utf8");
+  await mkdir(resolve(root, "小说工作室", "正文", "标准短篇"), { recursive: true });
+  await writeFile(resolve(root, "小说工作室", "正文", "标准短篇", "正文.md"), "正文", "utf8");
+  await writeFile(resolve(root, "小说工作室", "正文", "标准短篇", "小节大纲.md"), "大纲", "utf8");
+  await writeFile(resolve(root, "小说工作室", "正文", "标准短篇", "设定.md"), "设定", "utf8");
 
   // 只有 正文.md、缺 小节大纲.md/设定.md 伴生文件 → 不算短篇工程
-  await mkdir(resolve(root, "短篇", "半成品"), { recursive: true });
-  await writeFile(resolve(root, "短篇", "半成品", "正文.md"), "正文", "utf8");
+  await mkdir(resolve(root, "小说工作室", "正文", "半成品"), { recursive: true });
+  await writeFile(resolve(root, "小说工作室", "正文", "半成品", "正文.md"), "正文", "utf8");
 
   await mkdir(resolve(root, "普通资料"), { recursive: true });
   await writeFile(resolve(root, "普通资料", "正文.md"), "不是短篇工程", "utf8");
 
-  await mkdir(resolve(root, "拆文库", "伪项目"), { recursive: true });
-  await writeFile(resolve(root, "拆文库", "伪项目", "正文.md"), "拆文原文", "utf8");
-  await writeFile(resolve(root, "拆文库", "伪项目", "设定.md"), "拆文资料", "utf8");
+  await mkdir(resolve(root, "小说工作室", "拆书", "伪项目"), { recursive: true });
+  await writeFile(resolve(root, "小说工作室", "拆书", "伪项目", "正文.md"), "拆文原文", "utf8");
+  await writeFile(resolve(root, "小说工作室", "拆书", "伪项目", "设定.md"), "拆文资料", "utf8");
 
   return root;
 }
@@ -88,8 +88,8 @@ async function createProjectDiscoveryWorkspace() {
 async function createOversizedWorkspace(fileCount = 205) {
   const root = await mkdtemp(resolve(tmpdir(), "oh-story-dashboard-oversized-"));
   temporaryDirectories.push(root);
-  const project = resolve(root, "短篇", "巨书");
-  const library = resolve(root, "拆文库", "示例拆书");
+  const project = resolve(root, "小说工作室", "正文", "巨书");
+  const library = resolve(root, "小说工作室", "拆书", "示例拆书");
   await mkdir(project, { recursive: true });
   await mkdir(resolve(library, "章节"), { recursive: true });
   await writeFile(resolve(project, "正文.md"), "正文", "utf8");
@@ -112,8 +112,8 @@ async function createOversizedWorkspace(fileCount = 205) {
 async function createDeepSearchWorkspace() {
   const root = await mkdtemp(resolve(tmpdir(), "oh-story-dashboard-deep-search-"));
   temporaryDirectories.push(root);
-  const deepProject = resolve(root, "A深项目");
-  const targetProject = resolve(root, "B目标项目");
+  const deepProject = resolve(root, "小说工作室", "正文", "A深项目");
+  const targetProject = resolve(root, "小说工作室", "正文", "B目标项目");
   await mkdir(
     resolve(deepProject, ...Array.from({ length: 25 }, (_, index) => `第${index + 1}层`)),
     { recursive: true },
@@ -132,7 +132,7 @@ async function createDeepSearchWorkspace() {
 async function createSearchBudgetWorkspace(fileCount = 5005) {
   const root = await mkdtemp(resolve(tmpdir(), "oh-story-dashboard-search-budget-"));
   temporaryDirectories.push(root);
-  const project = resolve(root, "预算项目");
+  const project = resolve(root, "小说工作室", "正文", "预算项目");
   await mkdir(project, { recursive: true });
   await writeFile(resolve(project, "正文.md"), "正文", "utf8");
   await writeFile(resolve(project, "设定.md"), "设定", "utf8");
@@ -168,21 +168,21 @@ describe("workspace scanning", () => {
 
     assert.deepEqual(
       workspace.projects.map((entry) => entry.path),
-      ["短篇/标准短篇"],
+      ["小说工作室/正文/标准短篇"],
     );
-    assert.deepEqual(workspace.libraries.map((entry) => entry.path), ["拆文库/伪项目"]);
+    assert.deepEqual(workspace.libraries.map((entry) => entry.path), ["小说工作室/拆书/伪项目"]);
     assert.ok(!workspace.projects.some((entry) => entry.path === "普通资料"));
-    assert.ok(!workspace.projects.some((entry) => entry.path === "短篇/半成品"));
-    assert.ok(!workspace.projects.some((entry) => entry.path.startsWith("拆文库/")));
+    assert.ok(!workspace.projects.some((entry) => entry.path === "小说工作室/正文/半成品"));
+    assert.ok(!workspace.projects.some((entry) => entry.path.startsWith("小说工作室/拆书/")));
   });
 
   test("does not use symlinked short-story marker files", async (context) => {
     const root = await createProjectDiscoveryWorkspace();
-    const candidate = resolve(root, "短篇", "符号链接标记");
+    const candidate = resolve(root, "小说工作室", "正文", "符号链接标记");
     await mkdir(candidate, { recursive: true });
     await writeFile(resolve(candidate, "设定.md"), "设定", "utf8");
     try {
-      await symlink(resolve(root, "短篇", "标准短篇", "正文.md"), resolve(candidate, "正文.md"));
+      await symlink(resolve(root, "小说工作室", "正文", "标准短篇", "正文.md"), resolve(candidate, "正文.md"));
     } catch (error) {
       if (error?.code === "EPERM") {
         context.skip("当前平台不允许创建测试符号链接");
@@ -192,10 +192,10 @@ describe("workspace scanning", () => {
     }
 
     const workspace = await scanWorkspace(root);
-    assert.ok(!workspace.projects.some((entry) => entry.path === "短篇/符号链接标记"));
+    assert.ok(!workspace.projects.some((entry) => entry.path === "小说工作室/正文/符号链接标记"));
   });
 
-  test("uses a stable dot path when the workspace itself is a short-story project", async () => {
+  test("ignores short-story projects outside 小说工作室/正文", async () => {
     const root = await mkdtemp(resolve(tmpdir(), "oh-story-dashboard-root-project-"));
     temporaryDirectories.push(root);
     await writeFile(resolve(root, "正文.md"), "正文", "utf8");
@@ -203,20 +203,14 @@ describe("workspace scanning", () => {
     await writeFile(resolve(root, "设定.md"), "设定", "utf8");
 
     const workspace = await scanWorkspace(root);
-    assert.deepEqual(workspace.projects.map((entry) => entry.path), ["."]);
-    const page = await listWorkspaceDirectory(root, ".");
-    assert.equal(page.path, ".");
-    assert.deepEqual(
-      page.entries.map((entry) => entry.name),
-      ["设定.md", "小节大纲.md", "正文.md"],
-    );
+    assert.deepEqual(workspace.projects.map((entry) => entry.path), []);
   });
 
   test("discovers roots without recursively serializing every manuscript", async () => {
     const workspace = await scanWorkspace(resolve("demo"));
     assert.deepEqual(
       workspace.libraries.map((entry) => entry.path),
-      ["拆文库/曾将爱意私藏"],
+      ["小说工作室/拆书/曾将爱意私藏"],
     );
     assert.deepEqual(
       workspace.projects.map((entry) => entry.path),
@@ -235,7 +229,7 @@ describe("workspace scanning", () => {
 
   test("loads only one directory level and keeps infrastructure folders hidden", async () => {
     const root = await createWorkspace();
-    const page = await listWorkspaceDirectory(root, "短篇/示例书");
+    const page = await listWorkspaceDirectory(root, "小说工作室/正文/示例书");
     assert.doesNotMatch(JSON.stringify(page), /\.git/);
     assert.doesNotMatch(JSON.stringify(page), /node_modules|fake-package/);
     assert.deepEqual(
@@ -246,7 +240,7 @@ describe("workspace scanning", () => {
     assert.equal(cover.editable, false);
     assert.equal(page.nextCursor, null);
 
-    const libraryPage = await listWorkspaceDirectory(root, "拆文库/示例拆书");
+    const libraryPage = await listWorkspaceDirectory(root, "小说工作室/拆书/示例拆书");
     assert.deepEqual(
       libraryPage.entries.map((entry) => entry.name),
       ["章节", "拆文报告.md"],
@@ -256,7 +250,7 @@ describe("workspace scanning", () => {
 
   test("paginates a wide directory without dropping or duplicating files", async () => {
     const root = await createOversizedWorkspace();
-    const path = "短篇/巨书";
+    const path = "小说工作室/正文/巨书";
     const first = await listWorkspaceDirectory(root, path);
     const second = await listWorkspaceDirectory(root, path, first.nextCursor);
     assert.equal(first.entries.length, 200);
@@ -271,11 +265,11 @@ describe("workspace scanning", () => {
     const root = await createWorkspace();
     const projects = await searchWorkspace(root, "正文", "projects");
     assert.deepEqual(projects.results.map((entry) => entry.path), [
-      "短篇/示例书/正文.md",
+      "小说工作室/正文/示例书/正文.md",
     ]);
     const libraries = await searchWorkspace(root, "第1章", "libraries");
     assert.deepEqual(libraries.results.map((entry) => entry.path), [
-      "拆文库/示例拆书/章节/第1章.md",
+      "小说工作室/拆书/示例拆书/章节/第1章.md",
     ]);
     assert.equal(projects.truncated, false);
     const pathOnly = await searchWorkspace(root, "示例书", "projects");
@@ -286,7 +280,7 @@ describe("workspace scanning", () => {
     const root = await createDeepSearchWorkspace();
     const result = await searchWorkspace(root, "目标正文", "projects");
     assert.deepEqual(result.results.map((entry) => entry.path), [
-      "B目标项目/目标正文.md",
+      "小说工作室/正文/B目标项目/目标正文.md",
     ]);
     assert.equal(result.truncated, true);
     assert.deepEqual(result.truncation, {
@@ -325,7 +319,7 @@ describe("workspace scanning", () => {
       return;
     }
     const root = await createWorkspace();
-    const restricted = resolve(root, "短篇", "示例书", "受限卷");
+    const restricted = resolve(root, "小说工作室", "正文", "示例书", "受限卷");
     await mkdir(restricted, { recursive: true });
     await writeFile(resolve(restricted, "目标章.md"), "不可读取的正文", "utf8");
     await chmod(restricted, 0o000);
@@ -346,7 +340,7 @@ describe("workspace scanning", () => {
       });
       assert.deepEqual(
         result.scanErrors.map(({ path, code }) => ({ path, code })),
-        [{ path: "短篇/示例书/受限卷", code: "EACCES" }],
+        [{ path: "小说工作室/正文/示例书/受限卷", code: "EACCES" }],
       );
     } finally {
       await chmod(restricted, 0o755);
@@ -425,8 +419,8 @@ describe("CLI portability", () => {
 
     assert.equal(
       pathsReferToSameFile(
-        resolve(root, "短篇", "示例书", "正文.md"),
-        resolve(alias, "短篇", "示例书", "正文.md"),
+        resolve(root, "小说工作室", "正文", "示例书", "正文.md"),
+        resolve(alias, "小说工作室", "正文", "示例书", "正文.md"),
       ),
       true,
     );
@@ -443,7 +437,7 @@ describe("HTTP API", () => {
     assert.doesNotMatch(JSON.stringify(workspace), /\.git/);
 
     const tree = await fetch(
-      `${baseUrl}/api/tree?path=${encodeURIComponent("短篇/示例书")}`,
+      `${baseUrl}/api/tree?path=${encodeURIComponent("小说工作室/正文/示例书")}`,
     ).then((response) => response.json());
     assert.deepEqual(
       tree.entries.filter((entry) => entry.type === "file").map((entry) => entry.name).sort(),
@@ -455,7 +449,7 @@ describe("HTTP API", () => {
       `${baseUrl}/api/search?q=${encodeURIComponent("正文")}&scope=projects`,
     ).then((response) => response.json());
     assert.deepEqual(search.results.map((entry) => entry.path), [
-      "短篇/示例书/正文.md",
+      "小说工作室/正文/示例书/正文.md",
     ]);
 
     const traversal = await fetch(
@@ -463,11 +457,11 @@ describe("HTTP API", () => {
     );
     assert.equal(traversal.status, 403);
     const invalidCursor = await fetch(
-      `${baseUrl}/api/tree?path=${encodeURIComponent("短篇/示例书")}&cursor=next`,
+      `${baseUrl}/api/tree?path=${encodeURIComponent("小说工作室/正文/示例书")}&cursor=next`,
     );
     assert.equal(invalidCursor.status, 400);
     const hiddenDirectory = await fetch(
-      `${baseUrl}/api/tree?path=${encodeURIComponent("短篇/示例书/.git")}`,
+      `${baseUrl}/api/tree?path=${encodeURIComponent("小说工作室/正文/示例书/.git")}`,
     );
     assert.equal(hiddenDirectory.status, 403);
   });
@@ -475,7 +469,7 @@ describe("HTTP API", () => {
   test("loads and atomically saves an editable file", async () => {
     const root = await createWorkspace();
     const baseUrl = await startServer(root);
-    const filePath = "短篇/示例书/正文.md";
+    const filePath = "小说工作室/正文/示例书/正文.md";
 
     const loadedResponse = await fetch(
       `${baseUrl}/api/file?path=${encodeURIComponent(filePath)}`,
@@ -503,7 +497,7 @@ describe("HTTP API", () => {
   test("returns 409 instead of overwriting an externally changed file", async () => {
     const root = await createWorkspace();
     const baseUrl = await startServer(root);
-    const filePath = "短篇/示例书/正文.md";
+    const filePath = "小说工作室/正文/示例书/正文.md";
     const loaded = await fetch(
       `${baseUrl}/api/file?path=${encodeURIComponent(filePath)}`,
     ).then((response) => response.json());
@@ -529,7 +523,7 @@ describe("HTTP API", () => {
   test("deletes an unchanged editable file but rejects cross-origin deletion", async () => {
     const root = await createWorkspace();
     const baseUrl = await startServer(root);
-    const filePath = "短篇/示例书/正文.md";
+    const filePath = "小说工作室/正文/示例书/正文.md";
     const loaded = await fetch(
       `${baseUrl}/api/file?path=${encodeURIComponent(filePath)}`,
     ).then((response) => response.json());
@@ -569,7 +563,7 @@ describe("HTTP API", () => {
   test("does not delete a file changed after it was opened", async () => {
     const root = await createWorkspace();
     const baseUrl = await startServer(root);
-    const filePath = "短篇/示例书/正文.md";
+    const filePath = "小说工作室/正文/示例书/正文.md";
     const loaded = await fetch(
       `${baseUrl}/api/file?path=${encodeURIComponent(filePath)}`,
     ).then((response) => response.json());
@@ -593,7 +587,7 @@ describe("HTTP API", () => {
   test("accepts only one of several simultaneous saves based on the same version", async () => {
     const root = await createWorkspace();
     const baseUrl = await startServer(root);
-    const filePath = "短篇/示例书/正文.md";
+    const filePath = "小说工作室/正文/示例书/正文.md";
     const loaded = await fetch(
       `${baseUrl}/api/file?path=${encodeURIComponent(filePath)}`,
     ).then((response) => response.json());
@@ -620,7 +614,7 @@ describe("HTTP API", () => {
   test("serializes simultaneous save and delete operations on the same version", async () => {
     const root = await createWorkspace();
     const baseUrl = await startServer(root);
-    const filePath = "短篇/示例书/正文.md";
+    const filePath = "小说工作室/正文/示例书/正文.md";
     const loaded = await fetch(
       `${baseUrl}/api/file?path=${encodeURIComponent(filePath)}`,
     ).then((response) => response.json());
@@ -654,7 +648,7 @@ describe("HTTP API", () => {
     const baseUrl = await startServer(root);
 
     const unsupported = await fetch(
-      `${baseUrl}/api/file?path=${encodeURIComponent("短篇/示例书/封面.png")}`,
+      `${baseUrl}/api/file?path=${encodeURIComponent("小说工作室/正文/示例书/封面.png")}`,
     );
     assert.equal(unsupported.status, 415);
 
@@ -674,7 +668,7 @@ describe("HTTP API", () => {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        path: "短篇/示例书/正文.md",
+        path: "小说工作室/正文/示例书/正文.md",
         content: "不能无版本覆盖",
       }),
     });
@@ -683,7 +677,7 @@ describe("HTTP API", () => {
 
     // 删除同样必须带版本号：409 那道比较挡不住它（NaN > 0.5 恒为 false），
     // 少了这条断言，去掉守卫也能一路绿灯把正文删干净。
-    const chapterPath = "短篇/示例书/正文.md";
+    const chapterPath = "小说工作室/正文/示例书/正文.md";
     const versionlessDelete = await fetch(`${baseUrl}/api/file`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -701,7 +695,7 @@ describe("HTTP API", () => {
     }
     const root = await createWorkspace();
     const baseUrl = await startServer(root);
-    const filePath = "短篇/示例书/正文.md";
+    const filePath = "小说工作室/正文/示例书/正文.md";
     const absolutePath = resolve(root, filePath);
     await chmod(absolutePath, 0o664);
 
@@ -733,7 +727,7 @@ describe("HTTP API", () => {
     }
     const root = await createWorkspace();
     const baseUrl = await startServer(root);
-    const libraryRoot = resolve(root, "拆文库");
+    const libraryRoot = resolve(root, "小说工作室", "拆书");
     await chmod(libraryRoot, 0o000);
     try {
       const response = await fetch(`${baseUrl}/api/workspace`);
@@ -744,11 +738,11 @@ describe("HTTP API", () => {
       assert.equal(payload.limits.truncatedByReadError, true);
       assert.deepEqual(
         payload.scanErrors.map(({ path, code }) => ({ path, code })),
-        [{ path: "拆文库", code: "EACCES" }],
+        [{ path: "小说工作室/拆书", code: "EACCES" }],
       );
       assert.deepEqual(
         payload.projects.map((entry) => entry.path),
-        ["短篇/示例书"],
+        ["小说工作室/正文/示例书"],
       );
     } finally {
       await chmod(libraryRoot, 0o755);

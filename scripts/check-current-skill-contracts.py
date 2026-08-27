@@ -95,10 +95,15 @@ LEGACY_RULES = (
         ("skills/story-setup/references/templates/hooks",),
     ),
     AbsentRule(
-        "obsolete-short-benchmark-path",
-        "short writing uses only current benchmark paths",
-        r"\{短篇标题\}/拆文库/\{书名\}",
-        ("skills/story-short-write",),
+        "obsolete-novel-workspace-path",
+        "active story skills use only 小说工作室/正文 and 小说工作室/拆书",
+        r"拆文库(?:/|-)|短篇/\{标题\}",
+        (
+            "skills/story",
+            "skills/story-short-analyze",
+            "skills/story-short-write",
+            "skills/story-setup/references/codex",
+        ),
     ),
     AbsentRule(
         "dotted-demo-workflow-label",

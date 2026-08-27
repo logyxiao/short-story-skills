@@ -393,8 +393,8 @@ function renderTree() {
         ? `搜索未完成，暂时无法确认是否存在“${query}”`
         : `没有找到“${query}”`
       : state.activeView === "libraries"
-        ? "工作区里还没有拆文库。运行拆文 skill 后，档案会出现在这里。"
-        : "还没有识别到写作项目。短篇需包含正文.md，并同时包含小节大纲.md或设定.md。";
+        ? "小说工作室/拆书里还没有拆书项目。运行拆文 skill 后，档案会出现在这里。"
+        : "小说工作室/正文里还没有写作项目。每本短篇需包含正文.md，并同时包含小节大纲.md或设定.md。";
     message.append(text);
     elements.fileTree.append(message);
     const truncation = searchTruncationMessage();

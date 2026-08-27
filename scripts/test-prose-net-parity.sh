@@ -314,7 +314,7 @@ PY
 # prose_block_reason）单处实现，fixture 上锚死命中/静默与中文文案，防回退。
 # fixture 至少覆盖：① 正文.md 硬编码角色属性的中文警告文案（含头尾框线）逐字一致、非正文
 # 不告警；② 短篇阻断判定 5 组：缺 小节大纲.md（有 设定.md 信号）拦、有 小节大纲.md 放、
-# 无 设定.md 信号放、拆文库 导入窗口放、已存在正文放——阻断文案逐字一致。
+# 无 设定.md 信号放、拆书导入窗口放、已存在正文放——阻断文案逐字一致。
 run_uncored_parity() {
   command -v node >/dev/null 2>&1 || return 1
   command -v python3 >/dev/null 2>&1 || return 1
@@ -345,9 +345,9 @@ PY
   grep -q 'notes.md' "$tmp/spy.txt" && { echo "FAIL: 非正文文件 notes.md 不应报硬编码属性" >&2; return 3; }
 
   # E2: 大纲阻断判定 —— 短篇 正文.md 首建缺 小节大纲.md(拦)/有(放)/无 设定.md 信号(放)/
-  #     拆文库 导入窗口(放)/已存在正文(放)，文案逐字一致
+  #     小说工作室/拆书 导入窗口(放)/已存在正文(放)，文案逐字一致
   local blk="$tmp/blk"
-  mkdir -p "$blk/nooutline" "$blk/withoutline" "$blk/nosignal" "$blk/import" "$blk/拆文库/import" "$blk/existing"
+  mkdir -p "$blk/nooutline" "$blk/withoutline" "$blk/nosignal" "$blk/import" "$blk/小说工作室/拆书/import" "$blk/existing"
   : > "$blk/nooutline/设定.md"
   : > "$blk/withoutline/设定.md"
   : > "$blk/withoutline/小节大纲.md"
@@ -367,7 +367,7 @@ PY
   grep -q 'nooutline/正文.md :: ⛔' "$tmp/bpy.txt" || { echo "FAIL: 短篇缺小节大纲未被拦截" >&2; return 3; }
   grep -q 'withoutline/正文.md :: -' "$tmp/bpy.txt" || { echo "FAIL: 短篇有小节大纲被误拦" >&2; return 3; }
   grep -q 'nosignal/正文.md :: -' "$tmp/bpy.txt" || { echo "FAIL: 无设定.md 信号的正文.md 被误拦" >&2; return 3; }
-  grep -q 'import/正文.md :: -' "$tmp/bpy.txt" || { echo "FAIL: 拆文库 导入窗口内的首建正文被误拦" >&2; return 3; }
+  grep -q 'import/正文.md :: -' "$tmp/bpy.txt" || { echo "FAIL: 小说工作室/拆书 导入窗口内的首建正文被误拦" >&2; return 3; }
   grep -q 'existing/正文.md :: -' "$tmp/bpy.txt" || { echo "FAIL: 已存在的正文.md 被误拦（续写/改稿）" >&2; return 3; }
 
   return 0

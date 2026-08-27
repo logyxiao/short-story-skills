@@ -96,10 +96,10 @@ assert_denied "$out" "apply_patch short prose without outline"
 out="$(run_hook pre-tool-prose-guard '{"tool_name":"apply_patch","tool_input":{"command":"*** Begin Patch\n*** Add File: patchbook/正文.md\n+正文\n*** End Patch\n"}}')"
 assert_empty "$out" "apply_patch short prose with outline"
 
-# story-import 迁移：已有 拆文库/{书名}/ 分析源时，正文先于小节大纲迁移是正常流程，放行
-mkdir -p "$ROOT/impbook" "$ROOT/拆文库/impbook"
+# story-import 迁移：已有 小说工作室/拆书/{书名}/ 分析源时，正文先于小节大纲迁移是正常流程，放行
+mkdir -p "$ROOT/impbook" "$ROOT/小说工作室/拆书/impbook"
 out="$(run_hook pre-tool-prose-guard '{"tool_name":"Write","tool_input":{"file_path":"impbook/正文.md","content":"正文"}}')"
-assert_empty "$out" "story-import short migration (拆文库 source present)"
+assert_empty "$out" "story-import short migration (小说工作室/拆书 source present)"
 
 echo "  OK outline-before-prose guard"
 

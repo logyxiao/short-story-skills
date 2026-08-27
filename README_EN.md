@@ -78,18 +78,21 @@ Keep setting, structure, and emotional arc in files, not conversation memory.
 **Short-form:**
 
 ```
-拆文库/{书名}/          # deconstruction source data (analyze output)
-短篇/{标题}/
-├── 设定.md             # genre positioning, characters, reversal setup, props, benchmark summary
-├── 小节大纲.md         # one-line-per-section lightweight blueprint + emotional arc
-├── 正文.md             # finished prose (single file, no chapter split)
-└── 对标/{书名}/        # reference analysis if any (analyze output)
-    ├── 拆文报告.md
-    ├── 情节节点.md
-    └── 写作手法.md
+小说工作室/
+├── 拆书/{书名}/        # deconstruction source data (analyze output)
+└── 正文/{标题}/
+    ├── 设定.md         # genre positioning, characters, reversal setup, props, benchmark summary
+    ├── 小节大纲.md     # one-line-per-section lightweight blueprint + emotional arc
+    ├── 正文.md         # finished prose (single file, no chapter split)
+    └── 对标/{书名}/    # reference analysis if any (analyze output)
+        ├── 拆文报告.md
+        ├── 情节节点.md
+        └── 写作手法.md
 ```
 
-`.active-book`: a text file in the project root holding the relative path of the active book (e.g. `短篇/我的小说`); hooks and writing skills locate the current project from it.
+`story-setup` creates `小说工作室/正文/` and `小说工作室/拆书/`, then adds both generated-content directories to the project-root `.gitignore` so test manuscripts do not appear in code changes.
+
+`.active-book`: a text file in the project root holding the relative path of the active book (e.g. `小说工作室/正文/我的小说`); hooks and writing skills locate the current project from it.
 
 ## Knowledge base
 

@@ -11,7 +11,7 @@ sync-policy: |
 
 # 输出契约：story-short-analyze ↔ story-short-write
 
-`story-short-analyze` 拆完一篇短篇后，产物落盘到 `拆文库/{书名}/`。`story-short-write`
+`story-short-analyze` 拆完一篇短篇后，产物落盘到 `小说工作室/拆书/{书名}/`。`story-short-write`
 写下一篇同题材短篇时，**同时**读这个目录下的全部产出。
 
 ---
@@ -19,7 +19,7 @@ sync-policy: |
 ## 输出目录与文件树
 
 ```
-拆文库/{书名}/
+小说工作室/拆书/{书名}/
 ├── 原文/                  # 管道前置步骤产出，存放源文件备份
 ├── 拆文报告.md             # 人类可读综合报告（Stage 2-6 综合）
 ├── 情节节点.md             # Stage 2 情节节点清单
@@ -144,13 +144,13 @@ Stage 6 内容写完后、`stages_completed[6]` append 前，跑三道检查：
 2. 读 `拆文报告.md` 的「核心手法」「共鸣分析」「可复用结构」段，决定要保留 / 调整哪些。
 3. 读 `情节节点.md` 把节奏锚点抄到新故事的字数位置上。
 4. 写场景时翻 `写作手法.md` + `原文/`，参考具体写法。
-5. 写完后（可选）在新文档 frontmatter 写 `derived_from: 拆文库/{书名}/` 追溯。
+5. 写完后（可选）在新文档 frontmatter 写 `derived_from: 小说工作室/拆书/{书名}/` 追溯。
 
 ### 维护者本地烟雾测试
 
 ```bash
-ls 拆文库/{书名}/   # 应有：原文/ 拆文报告.md 情节节点.md 写作手法.md _meta.json
-/story-short-write 拆文库/{书名}/
+ls 小说工作室/拆书/{书名}/   # 应有：原文/ 拆文报告.md 情节节点.md 写作手法.md _meta.json
+/story-short-write 小说工作室/拆书/{书名}/
 # 通过：输出 8000+ 字同题材新短篇，prose 有源文对话节奏和画面感
 # 失败：写得像填空 / 或 short-write 找不到三个 markdown
 ```

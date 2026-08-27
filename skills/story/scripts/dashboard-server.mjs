@@ -301,10 +301,10 @@ export async function listWorkspaceDirectory(root, requestedPath, cursorValue = 
 
 async function listLibraryRoots(root, scanErrors) {
   const roots = [];
-  const standardRoot = resolve(root, "拆文库");
+  const standardRoot = resolve(root, "小说工作室", "拆书");
   const standardInfo = await lstat(standardRoot).catch(() => null);
   if (standardInfo?.isDirectory() && !standardInfo.isSymbolicLink()) {
-    // 单个拆文库读不动时保留其他项目，但把残缺扫描显式带回前端；空数组只能表达“确实为空”，
+    // 单个拆书项目读不动时保留其他项目，但把残缺扫描显式带回前端；空数组只能表达“确实为空”，
     // 不能再同时承担权限错误/外挂盘掉线，否则作者会把不可见文稿误当成不存在。
     const entries = await readdir(standardRoot, { withFileTypes: true }).catch((error) => {
       recordScanError(scanErrors, root, standardRoot, error);
@@ -312,29 +312,13 @@ async function listLibraryRoots(root, scanErrors) {
     });
     for (const entry of entries) {
       if (entry.isDirectory() && !entry.isSymbolicLink()) {
-        roots.push({ absolutePath: resolve(standardRoot, entry.name), relativePath: `拆文库${sep}${entry.name}` });
+        roots.push({
+          absolutePath: resolve(standardRoot, entry.name),
+          relativePath: `小说工作室${sep}拆书${sep}${entry.name}`,
+        });
       }
     }
   }
-
-  // 工作区根目录读不动就没有任何可展示的树，直接给出可执行的报错，而不是静默返回空树。
-  const rootEntries = await readdir(root, { withFileTypes: true }).catch(() => {
-    throw new DashboardError(
-      403,
-      "workspace_unreadable",
-      `工作区目录无法读取，请检查访问权限：${root}`,
-    );
-  });
-  for (const entry of rootEntries) {
-    if (
-      entry.name.startsWith("拆文库-") &&
-      entry.isDirectory() &&
-      !entry.isSymbolicLink()
-    ) {
-      roots.push({ absolutePath: resolve(root, entry.name), relativePath: entry.name });
-    }
-  }
-
   return roots.sort((left, right) =>
     left.relativePath.localeCompare(right.relativePath, "zh-CN", { numeric: true }),
   );
@@ -394,10 +378,22 @@ async function findProjectRoots(
 }
 
 async function discoverWorkspaceRoots(realRoot) {
+  // 即使只扫描小说工作室，也要先确认工作区根目录可读；否则权限故障会被误报成空工作室。
+  await readdir(realRoot, { withFileTypes: true }).catch(() => {
+    throw new DashboardError(
+      403,
+      "workspace_unreadable",
+      `工作区目录无法读取，请检查访问权限：${realRoot}`,
+    );
+  });
   const scanErrors = [];
   const libraryRoots = await listLibraryRoots(realRoot, scanErrors);
   const libraryPaths = libraryRoots.map((entry) => entry.absolutePath);
-  const projectRoots = await findProjectRoots(realRoot, libraryPaths, scanErrors);
+  const writingRoot = resolve(realRoot, "小说工作室", "正文");
+  const writingInfo = await lstat(writingRoot).catch(() => null);
+  const projectRoots = writingInfo?.isDirectory() && !writingInfo.isSymbolicLink()
+    ? await findProjectRoots(realRoot, libraryPaths, scanErrors, writingRoot)
+    : [];
   return { libraryRoots, projectRoots, scanErrors };
 }
 
@@ -445,7 +441,7 @@ export async function searchWorkspace(root, queryValue, scopeValue) {
     throw new DashboardError(400, "invalid_query", "搜索词长度必须在 1–100 个字符之间");
   }
   if (!["libraries", "projects"].includes(scopeValue)) {
-    throw new DashboardError(400, "invalid_scope", "搜索范围必须是拆文库或写作项目");
+    throw new DashboardError(400, "invalid_scope", "搜索范围必须是拆书或正文项目");
   }
 
   const realRoot = await existingRealRoot(root);

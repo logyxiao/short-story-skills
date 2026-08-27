@@ -1,6 +1,6 @@
 ---
 name: story
-description: "网络小说工具箱主入口。根据用户需求自动路由到对应 skill，并可启动本地 Dashboard 查看拆文库、写作项目和编辑文本。触发方式：/story、$story、/story dashboard、$story dashboard、/网文、「我想写小说」「打开工作台」「检查更新」。"
+description: "网络小说工具箱主入口。根据用户需求自动路由到对应 skill，并可启动本地 Dashboard 查看小说工作室中的拆书库、正文项目和编辑文本。触发方式：/story、$story、/story dashboard、$story dashboard、/网文、「我想写小说」「打开工作台」「检查更新」。"
 metadata: {"openclaw":{"source":"https://github.com/worldwonderer/oh-story-claudecode"}}
 ---
 # story：网文工具箱路由
@@ -19,7 +19,7 @@ metadata: {"openclaw":{"source":"https://github.com/worldwonderer/oh-story-claud
 | 去 AI 味 | 去 AI 味、太 AI、去味 | `/story-deslop` |
 | 审查稿件 | 审查、审稿、帮我审一下、一致性检查、看看有没有问题 | `/story-review` |
 | 环境部署 | 准备写书、搭环境、初始化 | `/story-setup` |
-| 工作台 | dashboard、工作台、看拆文库、浏览项目文件、打开项目面板 | 见下方「Dashboard 工作台」 |
+| 工作台 | dashboard、工作台、看拆书库、浏览项目文件、打开项目面板 | 见下方「Dashboard 工作台」 |
 | 检查/更新版本 | 检查更新、有新版本吗、升级、更新工具箱 | 见下方「版本更新检查」 |
 | 切换/列出书目 | 切书、换书、列出我的书、我在写哪几本、切换项目 | 见下方「多书切换」 |
 | 查故事资料 | 查角色、查伏笔、查进度、查设定、什么状态、写到哪了 | 主线程直接用 Read/Grep 从项目文件检索（见下方「查询降级」） |
@@ -44,7 +44,7 @@ metadata: {"openclaw":{"source":"https://github.com/worldwonderer/oh-story-claud
 5. Dashboard 默认只监听 `127.0.0.1`。不要主动增加 `--allow-network`，不要把工作区暴露到
    局域网或公网。
 
-工作台会识别标准 `拆文库/{书名}/`，兼容存量 `拆文库-{书名}/`。写作项目识别采用短篇单文件结构：目录内含普通文件 `正文.md`，并同时含 `小节大纲.md` 或 `设定.md`。
+工作台只扫描统一工作室结构：拆书项目位于 `小说工作室/拆书/{书名}/`；写作项目位于 `小说工作室/正文/{书名}/`，目录内含普通文件 `正文.md`，并同时含 `小节大纲.md` 或 `设定.md`。
 
 符号链接不作为项目标记，只有单个 `正文.md` 的普通资料目录也不会被误认。浏览器可编辑
 `.md`、`.txt`、`.json`、`.yaml`、`.yml`、`.toml`，保存或确认删除前用修改时间防止
@@ -69,7 +69,7 @@ metadata: {"openclaw":{"source":"https://github.com/worldwonderer/oh-story-claud
 
 路由前先检查当前项目状态：
 
-- **无项目目录**（没有包含 `正文.md` 的书名目录）：
+- **无项目目录**（`小说工作室/正文/` 下没有包含 `正文.md` 的书名目录）：
   - 如果用户要写作，下一步是先运行 `/story-setup` 初始化环境（Codex 中用 `$story-setup`）
   - 如果用户要扫榜/拆文，直接路由
 - **已有项目**：检查 `.story-deployed` 标记，如未部署则先运行 `/story-setup`（Codex 中用 `$story-setup`）
@@ -78,7 +78,7 @@ metadata: {"openclaw":{"source":"https://github.com/worldwonderer/oh-story-claud
 
 用户想切换或查看在写的书时（一个项目可同时有多本）：
 
-1. 在项目根查找所有书目录：包含普通文件 `正文.md` 的目录（含 `短篇/` 下的子目录）。
+1. 只在 `小说工作室/正文/` 下查找书目录：目录内包含普通文件 `正文.md`，并同时包含 `小节大纲.md` 或 `设定.md`。
 2. 列出书名，并标出当前 `.active-book` 指向的那本。
 3. 让用户选择，把所选书的相对路径写入项目根 `.active-book`（覆盖原内容）。
 4. 只发现一本时直接确认为活跃书，无需询问。

@@ -1080,7 +1080,7 @@ def prose_block_reason(root: Path, abs_path: Path) -> str | None:
         if abs_path.exists():
             return None
         book_dir = abs_path.parent
-        if (root / "拆文库" / book_dir.name).exists():
+        if (root / "小说工作室" / "拆书" / book_dir.name).exists():
             return None
         if not (book_dir / "设定.md").exists():
             return None
